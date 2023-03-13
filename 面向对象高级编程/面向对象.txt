@@ -1,0 +1,403 @@
+Python面向对象篇（3）-封装、多态、反射及描述符
+1、 多态
+　　多态，最浅显的意识就是同一事物具有多种形态，这很好理解，动物是一个大类，猫类属于动物类，狗类属于动物类，人也是属于动物类，那能理解成，猫、狗、人是一样的吗？当然不是，还有，水，分为液体、固体、气体，但它们都是H20构成的，这也是多态。意味着对于不同的类的对象，可以执行相同的操作，
+
+　　多态是面向对象语言的一个基本特性，多态就意味着变量不需要知道引用的对象是什么，通过一个统一的接口，对引入的不同对象表现出不同的行为方式。
+
+　　下面这个例子
+
+复制代码
+ import abc
+ class Animal(metaclass=abc.ABCMeta):
+     @abc.abstractmethod
+     def yell(self):
+         pass
+ class Dog(Animal):
+     def yell(self):
+         print("汪汪汪~")
+ class Cat(Animal):
+     def yell(self):
+         print("喵喵喵")
+复制代码
+　　在上面这段代码中，类Animal作为一个大类，定义了yell方法，但对于Animal来说，有很多不同的形态表示，猫，狗、人等等都属于Animal类，而每个类都有不同的叫声，这就是同一类，多种形态的表示方式。
+
+2、 封装
+　　面向对象的程序设计中，某个类把所需要的数据（也可以说是类的属性）和对数据的操作（也可以说是类的行为）全部都封装在类中，分别称为类的成员变量和方法（或成员函数）。这种把成员变量和成员函数封装在一起的编程特性称为封装。封装，其实就是为了对外部隐藏对象的代码逻辑。
+
+       封装在概念上和多态很相似，但是不等同于多态。多态可以让实例对不知道是什么的类的对象进行属性、方法的调用，而封装是可以不同关心对象是如何构建就可以直接调用的。
+
+　　在python中用双下划线开头的方式，将属性隐藏起来。双下划线+属性名就是私有的标识符，会自动变形为_类名__属性名的形式，即__x都会变形成_类名__x的形式，可以从类的属性字典中很明显的看到这种变形。这种变换不会关注标识符的语法位置，因此可以用来定义类私有的实例和类变量、方法、全局变量。
+
+　　看下面这个例子：创建一个类Person，类变量，全局变量，和方法都有通过双下划线__设置的私有变量
+
+复制代码
+ class Person:
+     __skin = "yellow"  #设置类的数据属性为私有的
+     hair = "black"
+     def __init__(self,name,age,height):
+         self.__name = name    #变形为self._Person_name的形式
+         self.age = age
+         self.height = height
+     def __dance(self):        #变形为_Person__dance的形式
+         print("%s正在跳舞"%self.name)
+     def sing(self):
+         print("%s正在唱歌"%self.name)
+ p_1 = Person("Tony",18,160)
+复制代码
+   　　 在这个例子中，__skin、__self.name、__dance都是私有变量，外部的实例是无法直接访问的，通过实例p_1.属性\方法的形式，是无法调用这3个属性的，这就是私有变量的意义所在。
+
+    　　但其实，这只是一种python的约定，如果非想在外部的实例调用其私有变量，也并不是不可能。如果知道了类名和想调用的私有属性名，就可以调用。
+
+即p_1._Person__skin这种方式，（注意：类名前是一个下划线，私有属性前是双下划线），调用方法p_1._Person__dance()
+
+    　　封装并不仅仅是为了将类中的属性隐藏起来，更多的需求是将私有属性作为外部调用的一个接口，用来对传入的数据做相应的限制，如下面这个例子：
+
+复制代码
+  class Person:
+     def __init__(self,name,age):
+         self.__name = name
+         self.__age = age
+     def person_info(self):
+         print("My name is %s，My age is %s"%(self.__name,self.__age))
+     def set_person_info(self,name,age):
+         if not isinstance(name,str):
+             raise TypeError("名字必须是字符串类型")
+         if not isinstance(age,int):
+             raise TypeError("年龄必须是整数类型")
+             self.__name = name
+             self.__age = age
+ p_1 = Person("Tony",23)
+ p_1.person_info()
+ p_1.set_person_info(11,"An")
+ p_1.person_info()
+复制代码
+　　　　在上面这个例子中，想要调用person_info()这个方法来显示出一个人的姓名和年龄，但是如果想要限制用户输入的姓名和年龄的数据类型，就要通过set_person_info（）这个方法来作为用户输入的一个接口。
+
+　　　　单下划线定义的模块名，不用from..import..的方式导入
+
+　　　　授权是封装的一个特性，
+
+3、 反射
+　　　　反射（或自省）主要是指程序可以访问、检测、和修改它本身状态或行为的一种能力，在python中，通过字符串的形式操作对象相关的属性，python中的一切事物都是对象，即都可以使用反射。
+
+　　 　　hasattr、getattr、setattr、delattr
+
+　　　　四个可以实现自省的函数：
+
+hasattr(object,name)
+
+判断对象是否包含对应的属性。
+
+object -- 对象
+
+name   -- 字符串，属性名
+
+getattr(object,name,[default])
+
+getattr() 函数用于返回一个对象属性值。
+
+object -- 对象。
+
+name   -- 字符串，对象属性。
+
+default -- 默认返回值，如果不提供该参数，在没有对应属性时，将触发 AttributeError。
+
+setattr(object,name,value)
+
+setattr 函数对应函数 getatt()，用于设置属性值，该属性必须存在。
+
+object – 对象
+
+name    - 字符串，属性名
+
+value   - 属性值
+
+ 
+
+delattr(object, name)
+
+delattr 函数用于删除属性。
+
+delattr(x, 'foobar') 相等于 del x.foobar。
+
+object -- 对象。
+
+name -- 必须是对象的属性。
+
+   
+
+    　　　　通过下面这个实例，来演示一下4个函数的使用方法：
+
+复制代码
+ class Person:
+     skin = "yellow"
+     hair = "black"
+     def __init__(self,name,age):
+         self.name = name
+         self.age = age
+     def dance(self):
+         print("%s正在跳舞"%self.name)
+ p_1 = Person("Tony",18)
+ #判断Person类中是否含有dance属性，
+ print(hasattr(Person,"dance"))
+ #得到Person类中的skin属性的值，如果传入的是方法名，返回的就是方法的内存地址
+ print(getattr(Person,"skin"))
+ print(getattr(Person,"skin11"))   #属性不存在，程序报错
+ #修改Person类中skin属性的值，类属性字典中也会做相应改变，通过Person.__dict__查看
+ setattr(Person,"skin","black")
+ print(getattr(Person,"skin"))
+ #删除Person类中hair这个属性，类的属性字典中也会删除
+ delattr(Person,"hair")
+ delattr(Person,"hair11")         #属性不存在，报错  
+复制代码
+　　 反射有什么好处？反射就可以事先定义好接口，这意味这什么呢？就是可以先写好主要的逻辑，然后再去后期实现实现的功能。
+
+ 　　__getattr__、__setattr__、__delattr__
+
+复制代码
+ class Attr:
+     def __init__(self,x):
+         self.x = x
+     def __getattr__(self, item):
+         print("--->getter")
+     def __setattr__(self, key, value):
+         print("--->setattr")
+     def __delattr__(self, item):
+ 9         print("--->delattr")
+复制代码
+　　在这个例子中，重写了__getattr__、__setattr__、__delattr__这三个方法。这三个方法的存在会对类发生什么改变呢？
+
+__getattr__：
+
+　　只有在实例调用属性且调用的属性不存在才会运行
+
+复制代码
+ print(a_1.x)
+ 运行结果：
+ --->setattr    #只要赋值操作，就会触发__setattr__方法
+ 6
+ print(a_1.y)
+ 运行结果：
+ --->setattr
+ --->getter
+ None
+复制代码
+　　还有一个__getattribute__方法，无论调用的属性是否存在，都会触发__getattribute__方法。当__getattribute__和__getattr__同时存在的话，只会执行__getattribute__，除非__getattribute__在执行的过程中抛出异常
+
+__setattr__：
+复制代码
+ a_1 = Attr(6)
+ print(a_1.__dict__)
+ 运行结果：
+ {'x': 6}
+ 删除注释，再次执行：
+ 运行结果：
+ --->setattr
+ {}
+复制代码
+　　　　先将这两行注销，然后创建一个实例并打印这个实例的属性字典：
+
+ 
+　　　　创建了实例，但是属性确没有写进属性字典中，这是为什么？
+
+　　　　这是因为，凡是赋值的操作，都会触发__setter__（）方法的运行，而在上面代码中，重写了__setattr__方法，代码逻辑仅仅有打印“--> setattr”操作，根本就没有将属性值写入实例属性的字典的操作，自然不会被写入，除非直接操作属性字典，否则根本无法往里面写入值。那么就需要进行如下修改：
+
+复制代码
+ class Attr:
+     def __init__(self,x):
+         self.x = x
+     def __getattr__(self, item):
+         print("--->getter")
+        self.__dict__[key]=value
+     def __setattr__(self, key, value):
+         print("--->setattr")
+     def __delattr__(self, item):
+         print("--->delattr")
+复制代码
+　　　　直接将实例化传入的值，写入实例的属性字典，有些人很容易将这步操作写成
+
+　　　　self.key = value ，这条语句是错误的，会导致程序无限递归。
+
+__delattr__
+　　　　与__setattr__实质相同，在重写了__delattr__方法后，也需要定义相应的代码来从实例的属性字典中删除。即：
+
+复制代码
+ class Attr:
+     def __init__(self,x):
+         self.x = x
+     def __getattr__(self, item):
+         print("--->getter")
+        self.__dict__[key]=value
+     def __setattr__(self, key, value):
+         print("--->setattr")
+     def __delattr__(self, item):
+         print("--->delattr")
+        self.__dict__.pop(item)
+复制代码
+　　　　可以先通过a_1.__dict__["a"]=1在实例的属性字典中添加属性a，进行删除测试，同样的，不可以在__delattr__()后通过del self.item的方式来删除，这样同样会引起无限递归。
+
+4、 描述符
+　　　　描述符是Python语言中很深奥也很重要的一个概念，简而言之，描述符也是一个对象，该对象代表了一个属性的值，这就意味着，如果一个类中有一个属性name，如果给该类添加了描述符，那么描述符就是另一个能代表属性name的对象。描述符协议中定义了_get_、_set_、_del_这些特殊的方法，描述符是实现其中的一个或多个方法的对象。这样说大家可能没有办法理解，还是通过代码讲解吧。
+
+　　　　__get__():调用一个属性时,触发
+　　　　__set__():为一个属性赋值时,触发
+　　　　__delete__():采用del删除属性时,触发
+
+　　　　定义一个描述符：
+
+复制代码
+ class Descriptor:
+     def __get__(self, instance, owner):
+         pass
+     def __set__(self, instance, value):
+         pass
+     def __delete__(self, instance):
+         pass
+复制代码
+　　　　前面说过了，描述符就是一个类，如果一个类中定义了这三个方法，这个类就被称为一个描述符。
+
+　　　　在前面讲过了__getattr__、__setattr__、__delattr__、方法，在由类产生实例的过程中会相应的触发这三个方法，而对_get_、_set_、_delete_来说，并不会被触发，那么触发这三个函数的条件又是什么？
+
+复制代码
+ class Descriptor:             #创建描述符Descriptor
+     def __get__(self, instance, owner):
+         print("--->get")
+     def __set__(self, instance, value):
+         print("--->set")
+     def __delete__(self, instance):
+         print("--->delete")
+  
+ 
+ class Person:
+     name = Descriptor()        #属性name被Descriptor描述符描述
+     def __init__(self,name):
+         self.name = name
+复制代码
+　　　　首先，描述符对描述符自身是没有用的，显而易见，之所以叫描述符，是用来描述其他对象的（类也是对象），从上段程序的运行结果可以明显的看出，name属性被描述符代理后，通过实例调用、设置、删除该属性，实质上执行的都是描述符Descriptor中的逻辑。描述符不可以被定义到构造函数中，必须赋值给类属性。这样写有什么意义呢？
+
+复制代码
+ p_1 = Person("Tony")
+ print(p_1.__dict__)
+ p_1.name = "An"
+ print(p_1.__dict__)
+ p_1.age = 18
+ print(p_1.__dict__)
+ 运行结果：
+ --->set
+ {}
+ --->set
+ {}
+ {'age': 18}
+复制代码
+　　　　创建了一个Person类的实例p_1,首先会触发_set_()方法，但是p_1的name=Tony这个属性并没有写入到它的属性字典中，修改name的属性为An，同样没有写入。这是因为，将Person类中的name这个属性通过name = Descriptor()  的方式被描述符代理了，所以调用该属性的时候，实质上就会去触发描述符Descriptor中的_set_方法，所以就无法写入。在最后添加了一个属性age，成功的写入到了实例p_1的属性字典中，是因为age这个属性没有被其他描述符代理，使用的就是类默认的逻辑来执行。
+
+如果想要自定义的描述中也具备属性写入的功能，可以将Descriptor中的_set_()修改如下：
+
+ def __set__(self, instance, value):
+         print("--->set")
+         instance.__dict__["name"]=value
+　　　　通过这个例子，可以看到描述符的强大之处，有很多时候，我们需要控制某些变量属性，就可以通过描述符来自定义想要的功能。
+
+　　　　描述符分为两种：
+
+　　　　数据描述符：至少实现了_get_()方法和_set_()方法。
+
+　　　　非数据描述符：没有实现_set_()方法。
+
+　　　　在调用的时候，应遵循以下优先级：类属性-->数据描述符-->实例属性-->非数据描述符-->__getattr__()方法（如果找不到属性的时候触发）
+
+　　　　__str__()和__repr__()方法：
+
+复制代码
+ class Person:
+     def __init__(self,name):
+         self.name = name
+     def __str__(self):
+         return ("my name is %s"%self.name)
+ p_1 = Person("An")
+ print(p_1)
+复制代码
+　　　　__str__发放就是可以自定义对象的字符串返回形式，如果不自定义__str__()方法，返回结果是：An,定义后，会按照定义的形式输出结果，即：my name is An。
+
+ 　　　   __repr__()方法可以理解为__str__()方法的替代品，如果__str__没有被定义，就会使用__repr__()方法来代替输出。
+
+    　　   __slots__属性：
+
+　　　　__slots__其实是一个类变量，访问类或实例的时候，实质上就是在访问类和实例的属性字典__dict__,（类的属性字典是共享的，即所有所属该类的实例都可以访问，实例的属性字典是是独立的）。
+
+复制代码
+ p_1 = Person()
+ p_1.name = "Tony"
+ #p_1.age = 18           #报错
+ #print(p_1.__dict__)   #报错，定义了__slots__,就不再有dict
+ print(p_1.__slots__)
+ 运行结果：
+ name
+复制代码
+　　　　但是字典是很占用计算机内存的，当类的属性很少，但是需要很多所属该类的实例的时候，就可以用__slots__来代替__dict__,__slots__中定义的变量就变成了类的描述符，类的实例只能拥有这些变量，但是不会拥有属于自己的属性字典，因此也就是不能增加新的变量。
+
+  　　   通过__slots__,可以限制实例的属性，即减小的占用的内存空间，也会大大提升属性的访问速度。
+
+5、 迭代器协议
+　　　　__next__和__iter__实现迭代器协议。
+
+复制代码
+ class Iterator():
+     def __init__(self,x):
+         self.x = x
+     def __iter__(self):
+         return self
+     def __next__(self):
+         
+         self.x+=1
+         return self.x
+ i_1 = Iterator(1)
+ for i in i_1:
+     print(i)
+复制代码
+　　　　这样就通过__iter__和__next__方法实现了迭代器。
+
+　　　　斐波那契数列：
+
+复制代码
+ class Fibo():
+     def __init__(self,x,y):
+         self.x = x
+         self.y = y
+     def __iter__(self):
+         return self
+     def __next__(self):
+         if self.x > 20:
+             raise StopIteration("超出终止")
+         self.x = self.y
+         self.y = self.x + self.y
+         return self.x
+ f_1= Fibo(0,1)
+ for i in f_1:
+     print(i)
+复制代码
+6、 上下文管理协议：__enter__和__exit__
+　　　　在管理文件操作的时候，可以通过with..open的方式来自动释放文件的内存，在类中，如果想让对象兼容with语句，必须在这个类中声明__enter__和__exit__方法
+
+复制代码
+ class File:
+     def __init__(self,x):
+         self.x = x
+     def __enter__(self):
+         print("--->enter")
+     def __exit__(self, exc_type, exc_val, exc_tb):
+         print("--->exit")
+ with File("test.txt") as f:
+ print("对象兼容with语句")
+ 运行结果：
+ --->enter
+复制代码
+　　　　对象兼容with语句
+
+　　　　--->exit
+
+　　　　从结果可以看出，文件操作流程中，首先触发__enter__方法，然后执行代码块中的内容，最后触发__exit__方法来释放文件内存。
+
+　　　　__exit__()中的三个参数分别代表异常类型，异常值和追溯信息,with语句中代码块出现异常，则with后的代码都无法执行。
+
+　　　　__call__:__call__方法的执行是通过对象名或类名后加（）来执行的。
